@@ -2,17 +2,22 @@ import requests
 import json
 #THIS FILE IS A SHELL OR TUTORIAL FOR HOW IT LOOKS LIKE ACCESSING THE CANVAS API
 #CANVAS API DOCUMENTATION LINK 1: https://auckland.test.instructure.com/doc/api/api-docs.json
-#CANVAS API DOCUMENTATION LINK 2: ttps://ufldev.test.instructure.com/doc/api/users.json
-CANVAS_API_TOKEN = '18024~c2zhFcNfVaCVuKPMuFPJeCyevELfyfh4wcWNFkRJUXz3zyxrzcaPvXLFvhuwteaf'
-headers = {'Authorization': 'Bearer 18024~c2zhFcNfVaCVuKPMuFPJeCyevELfyfh4wcWNFkRJUXz3zyxrzcaPvXLFvhuwteaf'}
-url = 'https://ufldev.test.instructure.com/api/v1/courses/'
+#CANVAS API DOCUMENTATION LINK 2: https://ufldev.test.instructure.com/doc/api/users.json
+CANVAS_API_DEV_TOKEN = '18024~GB2WcCRLAVe36FLhK4F3CQyvXPQCEym7PrFaDV7k6crfJv6L29HaxE6XrvTWEKBZ'
+CANVAS_API_TEST_TOKEN = '18024~kLm7ETCVZ9Zv7EvHBwt4BQexwRc2mrwaYDycxJMFRZUK4YrnDxfcAatmYQYHt38H'
+
+headers = {'Authorization': f'Bearer {CANVAS_API_DEV_TOKEN}'}
+url = 'https://ufldev.instructure.com/api/v1/courses/'
 course_id = '180/'
 
 r = requests.get(url, headers = headers)
+print("=== First API Call ===")
 print('status code: ')
 print(r.status_code)
 #print(r.text)
 print(r.json())
+print()
+print()
 # 1) Get course details (like you already did)
 course_details_url = f"{url}/{course_id}"
 resp_course = requests.get(course_details_url, headers=headers)
@@ -79,6 +84,27 @@ print("=== Quizzes ===")
 print("Status Code:", resp_quizzes.status_code)
 print(resp_quizzes.json())
 print()
+
+#9) Get smartsearch api calls
+smartsearch_url = f"{url}/{course_id}/smartsearch"
+params = {
+    "q": "Show me the syllabus", 
+  
+}
+resp_smartsearch = requests.get(smartsearch_url, headers=headers, params=params)
+print("=== Smartsearch ===")
+print("Status Code:", resp_quizzes.status_code)
+print(resp_smartsearch.json())
+resp_smartsearch_json = resp_smartsearch.json()
+print()
+print()
+print("=== Filtered Smartsearch ===")
+filtered_results = [
+    item for item in resp_smartsearch_json["results"] if item["distance"] <= 0.55
+]
+resp_smartsearch_json["results"] = filtered_results
+print(resp_smartsearch_json)
+
 
 # 9) Get enrollment details for the course
 '''enrollments_url = f"{url}/{course_id}/enrollments"
