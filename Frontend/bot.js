@@ -1,3 +1,6 @@
+const API_URL = "https://gator-aide.onrender.com"; // Flask API URL
+// const API_URL = "http://127.0.0.1:5000"; // Local Flask API URL
+
 document.getElementById("user-input").addEventListener("keypress", function(event) {
     if (event.key === "Enter") {
         sendMessage();
@@ -11,11 +14,22 @@ function sendMessage() {
     appendMessage("user", userInput);
     document.getElementById("user-input").value = "";
 
-    // Simulate bot response
-    setTimeout(() => {
-        let botResponse = getBotResponse(userInput);
-        appendMessage("bot", botResponse);
-    }, 500);
+    fetch(`${API_URL}/chat`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message: userInput })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("API Response:", data);
+        appendMessage("bot", data.response || "Error processing your request.");
+    })
+    .catch(error => {
+        console.error("Error fetching from API:", error);
+        appendMessage("bot", "Failed to connect to backend.");
+    });
 }
 
 function appendMessage(sender, message) {
@@ -25,19 +39,4 @@ function appendMessage(sender, message) {
     messageDiv.textContent = message;
     chatBox.appendChild(messageDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function getBotResponse(input) {
-    input = input.toLowerCase();
-
-    // Simple keyword-based responses
-    if (input.includes("hello") || input.includes("hi")) {
-        return "Hello! How can I assist you today?";
-    } else if (input.includes("help")) {
-        return "Sure! What do you need help with?";
-    } else if (input.includes("bye")) {
-        return "Goodbye! Have a great day!";
-    } else {
-        return "I'm not sure I understand. Can you rephrase?";
-    }
 }
