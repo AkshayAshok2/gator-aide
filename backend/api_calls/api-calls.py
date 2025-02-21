@@ -88,7 +88,7 @@ print()
 #9) Get smartsearch api calls
 smartsearch_url = f"{url}/{course_id}/smartsearch"
 params = {
-    "q": "Show me the syllabus", 
+    "q": "What are key details in the syllabus", 
   
 }
 resp_smartsearch = requests.get(smartsearch_url, headers=headers, params=params)
