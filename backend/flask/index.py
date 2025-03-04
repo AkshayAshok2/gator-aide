@@ -31,7 +31,7 @@ COURSE_ID = "180"
 def serve_index():
     return send_from_directory(app.static_folder, "index.html")
 
-@app.route("/<path:path>")
+@app.route("/static/<path:path>")
 def serve_static_files(path):
     return send_from_directory(app.static_folder, path)
 
