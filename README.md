@@ -1,19 +1,19 @@
-# Gator-Aide
+# Gator**AI**de
 
-Gator-Aide is an **LTI 1.3-compliant** AI-powered educational assistant that integrates with **Canvas LMS** to help students navigate their course materials. It leverages **Canvas SmartSearch API** and **LLMs (like Llama 3.1-70B)** to provide accurate and contextual responses to student queries.
+Gator**AI**de is an **LTI 1.3-compliant** AI-powered educational assistant that integrates with **Canvas LMS** to help students navigate their course materials. It leverages **Canvas SmartSearch API** and **LLMs (like Llama 3.1-70B)** to provide accurate and contextual responses to student queries.
 
 ## ☁️ Hosting Information
 
 Our backend and frontend servers are hosted on **Render**, ensuring seamless deployment and scalability. The backend Flask API is deployed at `https://gator-aide-fubd.onrender.com`, and the frontend client is available at `https://gator-aide-client.onrender.com`.
 
-[Visit Gator-Aide Frontend](https://gator-aide-client.onrender.com)
+[Visit GatorAIde Frontend](https://gator-aide-client.onrender.com)
 
 ---
 
 ## 🚀 Features
 
 - **LTI 1.3 Integration** with Canvas LMS
-- **AI-powered responses** using OpenAI models
+- **AI-powered responses** using Llama 3.1
 - **Canvas SmartSearch API** for relevant course-related answers
 - **Flask API** backend with CORS support
 - **Frontend Chat Interface** for user interactions
@@ -23,7 +23,7 @@ Our backend and frontend servers are hosted on **Render**, ensuring seamless dep
 ## 💁️ Project Structure
 
 ```
-/gator-aide
+/-aide
 │── backend/
 │   │── index.py         # Main Flask backend API
 │   │── lti.py           # Handles LTI 1.3 authentication and launch
@@ -42,8 +42,8 @@ Our backend and frontend servers are hosted on **Render**, ensuring seamless dep
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/AkshayAshok2/gator-aide.git
-cd gator-aide
+git clone https://github.com/AkshayAshok2/-aide.git
+cd -aide
 ```
 
 ### 2️⃣ Backend Setup
