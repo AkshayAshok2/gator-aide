@@ -173,3 +173,5 @@ cython_debug/
 
 #Local windows requirements.txt
 piprequirements.txt
+private.key
+public.key

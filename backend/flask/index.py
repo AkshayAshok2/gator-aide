@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from lti import lti_bp
 import requests
 import openai
 import os
@@ -11,6 +12,11 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__, static_folder='../../frontend', static_url_path='')
 CORS(app)
+
+# Secret Key for session management
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback_secret_key")
+# Register the LTI blueprint
+app.register_blueprint(lti_bp)
 
 # Canvas API Token and LLM API Key from environment variables
 CANVAS_API_DEV_TOKEN = os.getenv("CANVAS_API_DEV_TOKEN")
