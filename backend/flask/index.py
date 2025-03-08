@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from lti import lti_bp
+from .lti import lti_bp
 import requests
 import openai
 import os
@@ -19,7 +19,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback_secret_key")
 app.register_blueprint(lti_bp)
 
 # Canvas API Token and LLM API Key from environment variables
-CANVAS_API_DEV_TOKEN = os.getenv("CANVAS_API_DEV_TOKEN")
+CANVAS_API_TOKEN = os.getenv("CANVAS_API_TOKEN")
 OPENAI_API_KEY = os.getenv("LLM_KEY")
 
 # Configure OpenAI (LiteLLM Proxy)
@@ -52,12 +52,13 @@ def chat():
             return jsonify({"response": "Please send a valid message."}), 400
 
         # Step 1: Query Canvas SmartSearch API
-        headers = {'Authorization': f'Bearer {CANVAS_API_DEV_TOKEN}'}
+        headers = {'Authorization': f'Bearer {CANVAS_API_TOKEN}'}
+        
         smartsearch_url = f"{CANVAS_API_BASE_URL}/{COURSE_ID}/smartsearch"
         params = {"q": user_message}
-
         smartsearch_response = requests.get(smartsearch_url, headers=headers, params=params)
         
+
         if smartsearch_response.status_code != 200:
             return jsonify({"response": "Failed to fetch results from Canvas SmartSearch."}), 500
         
@@ -68,8 +69,8 @@ def chat():
             item for item in smartsearch_json.get("results", []) if item["distance"] <= 0.55
         ]
         
-        if not filtered_results:
-            return jsonify({"response": "No relevant information found in SmartSearch results."})
+        # if not filtered_results:
+        #     return jsonify({"response": "No relevant information found in SmartSearch results."})
 
         # Step 3: Generate response using LLM (Modle can be changed via LiteLLM)
         context_data = "\n".join(
@@ -83,14 +84,17 @@ def chat():
         print(context_data)
         print()
         prompt = f"""
-        You are a helpful educational assistant designed to help students navigate their course materials.
-        A student has asked a question related to the course content. Using the following context from the Canvas SmartSearch results, provide a clear, concise, and student-friendly answer:
-
+        You are a helpful educational assistant named GatorAIde designed to help students navigate their course materials in the Canvas LMS.
+        If the query is a simple greeting, respond with a friendly greeting, stating who you are and what you can do in a short helpful way!
+        If the query is not related to course content or outside the scope of the class, respond with a simple message, apologizing that you can not answer that question and state who you are and what you can do in a short helpful way!
+        A student has asked a question related to the course content. The course is Programming Fundamentals 1. Using the following context from the Canvas SmartSearch results, provide a clear, concise, and student-friendly answer:
+        
+        Student's Question: {user_message}
+        
         Context:
         {context_data}
 
-        Student's Question: {user_message}
-
+        Remember to keep the responses short and sweet!
         Answer the question in a way that is easy for a student to understand, and provide additional explanations if necessary.
         """
 
@@ -111,5 +115,5 @@ def chat():
 
 # Run the Flask server
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=True)

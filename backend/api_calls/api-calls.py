@@ -93,7 +93,7 @@ params = {
 }
 resp_smartsearch = requests.get(smartsearch_url, headers=headers, params=params)
 print("=== Smartsearch ===")
-print("Status Code:", resp_quizzes.status_code)
+print("Status Code:", resp_smartsearch.status_code)
 print(resp_smartsearch.json())
 resp_smartsearch_json = resp_smartsearch.json()
 print()
