@@ -1,119 +1,117 @@
 # lti.py
+
 import os
-from flask import Blueprint, request, jsonify, session, redirect, url_for
-from pylti1p3.tool_config import ToolConfDict
-from pylti1p3.registration import Registration
-from pylti1p3.message_launch import MessageLaunch
-from pylti1p3.exception import LtiException
-from pylti1p3.cookie import CookieService
-from pylti1p3.launch_data_storage.cache import CacheDataStorage
+from flask import Blueprint, jsonify, redirect, session, request
 from dotenv import load_dotenv
+from pylti1p3.contrib.flask import (
+    FlaskRequest, 
+    FlaskOIDCLogin, 
+    FlaskMessageLaunch, 
+    FlaskSessionService, 
+    FlaskCookieService
+)
+
+# pylti1p3 standard config + registration classes
+from pylti1p3.tool_config import ToolConfDict
+from pylti1p3.exception import LtiException
 
 lti_bp = Blueprint("lti_bp", __name__)
 
 load_dotenv()
 
-# Load Private/Public Key from Environment Variables
+# Set up config
 private_key_pem = os.environ.get("LTI_PRIVATE_KEY", "")
 public_key_pem = os.environ.get("LTI_PUBLIC_KEY", "")
-if not private_key_pem:
-    raise RuntimeError("Missing LTI_PRIVATE_KEY in environment!")
-if not public_key_pem:
-    raise RuntimeError("Missing LTI_PUBLIC_KEY in environment!")
+if not private_key_pem or not public_key_pem:
+    raise RuntimeError("Missing LTI_PRIVATE_KEY or LTI_PUBLIC_KEY in environment!")
 
-# Build a pylti1p3 config dictionary for ufldev Canvas domain
-issuer = "https://ufldev.instructure.com"
-client_id = os.environ.get("LTI_CLIENT_ID")
-deployment_id = os.environ.get("LTI_DEPLOYMENT_ID")
+issuer = "https://ufldev.instructure.com"  # Example
+client_id = os.environ.get("LTI_CLIENT_ID") # e.g., "12340000000001"
+deployment_id = os.environ.get("LTI_DEPLOYMENT_ID", "")
 
-config_dict = {
-        issuer: [ 
-            {
-                "default": True,
-                "client_id": client_id,
-                "auth_login_url": f"{issuer}/api/lti/authorize_redirect",
-                "auth_token_url": f"{issuer}/login/oauth2/token",
-                "auth_server": issuer,
-                "key_set_url": "https://ufldev.instructure.com/api/lti/security/jwks",
-                "deployment_ids": [
-                    deployment_id
-                ]
-            }
-        ]
+pylti_config_dict = {
+    issuer: [
+        {
+            "default": True,
+            "client_id": client_id,
+            "auth_login_url": f"{issuer}/api/lti/authorize_redirect",
+            "auth_token_url": f"{issuer}/login/oauth2/token",
+            "auth_server": issuer,
+            "key_set_url": f"{issuer}/api/lti/security/jwks",
+            "deployment_ids": [deployment_id]
+        }
+    ]
 }
 
-# Create the pylti1p3 config
-tool_conf = ToolConfDict(config_dict)
-
-# Insert keys into the config
+tool_conf = ToolConfDict(pylti_config_dict)
 tool_conf.set_private_key(issuer, private_key_pem, client_id=client_id)
 tool_conf.set_public_key(issuer, public_key_pem, client_id=client_id)
 
-# Helper: Use Cookies + Cache for storing launch data
-def _get_launch_data_storage():
-    return CacheDataStorage(CookieService())
-
-# LTI Endpoints
+# JWKS ENDPOINT
 @lti_bp.route("/lti/jwks", methods=["GET"])
 def lti_jwks():
-    """
-    Canvas calls this endpoint to get your public JWKS.
-    """
     try:
+        # Fetch the public JWKS from tool_conf.
         jwks = tool_conf.get_jwks(issuer, client_id)
         return jsonify(jwks)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
+# 4) LOGIN INITIATION (OIDC)
 @lti_bp.route("/lti/login_initiation", methods=["GET", "POST"])
 def lti_login_initiation():
-    """
-    OpenID Connect login initiation. 
-    """
     try:
-        # Grab parameters from whichever method was used
-        iss = request.form.get("iss") or request.args.get("iss")
-        req_client_id = request.form.get("client_id") or request.args.get("client_id")
-        if not iss or not req_client_id:
-            raise LtiException("Missing iss or client_id in login initiation.")
+        flask_request = FlaskRequest()
 
-        reg = Registration()  
-        reg.set_tool_config(tool_conf)
-        reg.set_issuer(iss)
-        auth_login_url = reg.get_auth_login_url()
-        # This is where we want Canvas to redirect back to after OIDC handshake
-        launch_url = url_for("lti_bp.lti_launch", _external=True)
+        # (Optional)
+        # flask_request = FlaskRequest(
+        #   cookies=request.cookies,
+        #   session=session,
+        #   request_data=request.values,
+        #   request_is_secure=request.is_secure
+        # )
 
-        oidc_login = reg.get_oidc_login(auth_login_url, launch_url)
-        oidc_login.set_launch_data_storage(_get_launch_data_storage())
+        # Create the OIDC Login
+        oidc_login = FlaskOIDCLogin(
+            request=flask_request,
+            tool_config=tool_conf,
+            session_service=FlaskSessionService(flask_request),
+            cookie_service=FlaskCookieService(flask_request)
+        )
 
-        # Redirect user to Canvas's authorize_redirect
-        return oidc_login.redirect()
+        target_link = flask_request.get_param("target_link_uri")
 
+        return oidc_login.redirect(target_link)
+
+    except LtiException as e:
+        return jsonify({"error": f"LTI error: {str(e)}"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
-@lti_bp.route("/lti/launch", methods=["POST", "GET"])
+# 5) LTI LAUNCH
+@lti_bp.route("/lti/launch", methods=["GET", "POST"])
 def lti_launch():
-    """
-    Final LTI ResourceLinkRequest. Validate it, store any needed data, then show your UI.
-    """
     try:
-        iss = request.args.get("iss") or request.form.get("iss")
-        if not iss:
-            raise LtiException("No issuer (iss) in LTI launch.")
+        # Create a "FlaskRequest" for the LTI message
+        flask_request = FlaskRequest()
 
-        message_launch = MessageLaunch(tool_conf, request, iss, _get_launch_data_storage())
-        message_launch = message_launch.validate_registration().validate_deployment()
+        # Build a message launch object
+        message_launch = FlaskMessageLaunch(
+            request=flask_request,
+            tool_config=tool_conf,
+            session_service=FlaskSessionService(flask_request),
+            cookie_service=FlaskCookieService(flask_request)
+        )
 
-        # If needed, stores launch data in session
+        message_launch_data = message_launch.validate() 
+
         launch_data = message_launch.get_launch_data()
         session["lti_launch_data"] = launch_data
 
         # Redirect to main UI
         return redirect("https://gator-aide-client.onrender.com")
 
+    except LtiException as e:
+        return jsonify({"error": f"LTI error: {str(e)}"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 400
