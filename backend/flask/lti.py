@@ -80,6 +80,7 @@ def lti_login_initiation():
         )
 
         target_link = flask_request.get_param("target_link_uri")
+        print(target_link)
 
         return oidc_login.redirect(target_link)
 
