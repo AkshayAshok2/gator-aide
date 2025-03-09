@@ -25,12 +25,12 @@ public_key_pem = os.environ.get("LTI_PUBLIC_KEY", "")
 if not private_key_pem or not public_key_pem:
     raise RuntimeError("Missing LTI_PRIVATE_KEY or LTI_PUBLIC_KEY in environment!")
 
-issuer = "https://ufldev.instructure.com"  # Example
-client_id = os.environ.get("LTI_CLIENT_ID") # e.g., "12340000000001"
+issuer = "https://ufldev.instructure.com"  
+client_id = os.environ.get("LTI_CLIENT_ID")
 deployment_id = os.environ.get("LTI_DEPLOYMENT_ID", "")
 
 pylti_config_dict = {
-    issuer: [
+    "https://canvas.instructure.com": [
         {
             "default": True,
             "client_id": client_id,
