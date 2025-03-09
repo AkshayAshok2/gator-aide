@@ -36,7 +36,6 @@ pylti_config_dict = {
             "client_id": client_id,
             "auth_login_url": "https://sso.canvaslms.com/api/lti/authorize_redirect",
             "auth_token_url": "https://sso.canvaslms.com/login/oauth2/token",
-            "auth_server": issuer,
             "key_set_url": "https://sso.canvaslms.com/api/lti/security/jwks",
             "deployment_ids": [deployment_id]
         }
