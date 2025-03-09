@@ -109,7 +109,7 @@ def lti_launch():
         session["lti_launch_data"] = launch_data
 
         # Redirect to main UI
-        return redirect("https://gator-aide-client.onrender.com")
+        return redirect("https://gator-aide-fubd.onrender.com")
 
     except LtiException as e:
         return jsonify({"error": f"LTI error: {str(e)}"}), 400
