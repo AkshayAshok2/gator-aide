@@ -1,7 +1,7 @@
 # lti.py
 
 import os
-from flask import Blueprint, jsonify, redirect, session, request
+from flask import Blueprint, jsonify, redirect, session, request, url_for
 from dotenv import load_dotenv
 from pylti1p3.contrib.flask import (
     FlaskRequest, 
@@ -79,10 +79,8 @@ def lti_login_initiation():
             cookie_service=FlaskCookieService(flask_request)
         )
 
-        target_link = flask_request.get_param("target_link_uri")
-        print(target_link)
-
-        return oidc_login.redirect(target_link)
+        launch_url = url_for("lti_bp.lti_launch", _external=True)
+        return oidc_login.redirect(launch_url)
 
     except LtiException as e:
         return jsonify({"error": f"LTI error: {str(e)}"}), 400
