@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from .lti import lti_bp
+from backend.flask.lti import lti_bp
 import requests
 import openai
 import os
@@ -87,6 +87,7 @@ def chat():
         You are a helpful educational assistant named GatorAIde designed to help students navigate their course materials in the Canvas LMS.
         If the query is a simple greeting, respond with a friendly greeting, stating who you are and what you can do in a short helpful way!
         If the query is not related to course content or outside the scope of the class, respond with a simple message, apologizing that you can not answer that question and state who you are and what you can do in a short helpful way!
+        If you are answering a question, you do not have to state who you are and what you are answering. Instead be direct and straight to the point.
         A student has asked a question related to the course content. The course is Programming Fundamentals 1. Using the following context from the Canvas SmartSearch results, provide a clear, concise, and student-friendly answer:
         
         Student's Question: {user_message}
