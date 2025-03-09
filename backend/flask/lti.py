@@ -66,24 +66,29 @@ def lti_jwks():
         return jsonify({"error": str(e)}), 500
 
 
-@lti_bp.route("/lti/login_initiation", methods=["GET"])
+@lti_bp.route("/lti/login_initiation", methods=["GET", "POST"])
 def lti_login_initiation():
     """
-    OpenID Connect login initiation. Canvas hits this first.
+    OpenID Connect login initiation. 
     """
     try:
-        iss = request.args.get("iss")
-        req_client_id = request.args.get("client_id")
+        # Grab parameters from whichever method was used
+        iss = request.form.get("iss") or request.args.get("iss")
+        req_client_id = request.form.get("client_id") or request.args.get("client_id")
         if not iss or not req_client_id:
-            raise LtiException("Missing iss or client_id in query params.")
+            raise LtiException("Missing iss or client_id in login initiation.")
 
         reg = Registration(tool_conf, iss)
         auth_login_url = reg.get_auth_login_url()
+        # This is where we want Canvas to redirect back to after OIDC handshake
         launch_url = url_for("lti_bp.lti_launch", _external=True)
 
         oidc_login = reg.get_oidc_login(auth_login_url, launch_url)
         oidc_login.set_launch_data_storage(_get_launch_data_storage())
+
+        # Redirect user to Canvas's authorize_redirect
         return oidc_login.redirect()
+
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
