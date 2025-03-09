@@ -79,8 +79,8 @@ def lti_login_initiation():
             cookie_service=FlaskCookieService(flask_request)
         )
 
-        launch_url = url_for("lti_bp.lti_launch", _external=True)
-        return oidc_login.redirect(launch_url)
+        target_link = flask_request.get_param("target_link_uri")
+        return oidc_login.redirect(target_link)
 
     except LtiException as e:
         return jsonify({"error": f"LTI error: {str(e)}"}), 400
