@@ -78,7 +78,9 @@ def lti_login_initiation():
         if not iss or not req_client_id:
             raise LtiException("Missing iss or client_id in login initiation.")
 
-        reg = Registration(tool_conf, iss)
+        reg = Registration()  
+        reg.set_tool_config(tool_conf)
+        reg.set_issuer(iss)
         auth_login_url = reg.get_auth_login_url()
         # This is where we want Canvas to redirect back to after OIDC handshake
         launch_url = url_for("lti_bp.lti_launch", _external=True)
