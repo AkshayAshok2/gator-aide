@@ -24,20 +24,20 @@ private_key_pem = os.environ.get("LTI_PRIVATE_KEY", "")
 public_key_pem = os.environ.get("LTI_PUBLIC_KEY", "")
 if not private_key_pem or not public_key_pem:
     raise RuntimeError("Missing LTI_PRIVATE_KEY or LTI_PUBLIC_KEY in environment!")
-
-issuer = "https://ufldev.instructure.com"  
+ 
+issuer = "https://canvas.instructure.com"
 client_id = os.environ.get("LTI_CLIENT_ID")
 deployment_id = os.environ.get("LTI_DEPLOYMENT_ID", "")
 
 pylti_config_dict = {
-    "https://canvas.instructure.com": [
+    issuer: [
         {
             "default": True,
             "client_id": client_id,
-            "auth_login_url": f"{issuer}/api/lti/authorize_redirect",
-            "auth_token_url": f"{issuer}/login/oauth2/token",
+            "auth_login_url": "https://sso.canvaslms.com/api/lti/authorize_redirect",
+            "auth_token_url": "https://sso.canvaslms.com/login/oauth2/token",
             "auth_server": issuer,
-            "key_set_url": f"{issuer}/api/lti/security/jwks",
+            "key_set_url": "https://sso.canvaslms.com/api/lti/security/jwks",
             "deployment_ids": [deployment_id]
         }
     ]
