@@ -236,17 +236,8 @@ def lti_login_initiation():
         flask_request = FlaskRequest()
         launch_data_storage = get_launch_data_storage()
 
-        target_link = flask_request.get_param("target_link_uri")
-
-        if not target_link:
-            logging.error("LTI Login Initiation Failed: Missing 'target_link_uri'")
-            return jsonify({"error": "LTI Login Initiation Failed: Missing 'target_link_uri'"}), 400
-
-        # Log incoming request parameters for debugging
-        logging.info(f"LTI Login Initiation: target_link_uri={target_link}")
-
         oidc_login = FlaskOIDCLogin(flask_request, tool_conf, launch_data_storage=launch_data_storage)
-        return oidc_login.enable_check_cookies().redirect(target_link)
+        return oidc_login.enable_check_cookies().redirect()
 
     except LtiException as e:
         logging.error(f"LTI error: {str(e)}")
@@ -272,7 +263,7 @@ def lti_launch():
         # Store the launch data in session
         session["lti_launch_data"] = message_launch_data
 
-        # Redirect to main UI (unchanged from your original implementation)
+        # Redirect to main UI (unchanged from original implementation)
         return redirect("https://gator-aide-fubd.onrender.com")
 
     except LtiException as e:
