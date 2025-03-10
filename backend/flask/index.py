@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Blueprint, redirect, session
 from flask_cors import CORS
 from flask_caching import Cache
-from backend.flask.lti import lti_bp
+# from backend.flask.lti import lti_bp
 import requests
 import openai
 import os
@@ -9,12 +9,31 @@ import json
 from dotenv import load_dotenv
 import logging
 
+# Temporary
+from pylti1p3.tool_config import ToolConfDict
+from pylti1p3.exception import LtiException
+from pylti1p3.contrib.flask import (
+    FlaskRequest, 
+    FlaskOIDCLogin, 
+    FlaskMessageLaunch, 
+    FlaskSessionService, 
+    FlaskCookieService,
+    FlaskCacheDataStorage
+)
+
+# =============================================
 # Initialize Flask app
+# =============================================
 app = Flask(__name__, static_folder='../../frontend', static_url_path='')
 CORS(app)
-cache = Cache(app)  
+# Configure Flask caching
+app.config["CACHE_TYPE"] = "simple"
+cache = Cache(app)
+cache.init_app(app) 
 
-# Logging Purposes
+# =============================================
+# ============== WEBHOOK LOGGING ==============
+# =============================================
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1348451785966227497/3o8t4ulCGPLpRVRTL_6GL4LqfnvC-pjV_M7rSbBhrawYojH5_1muPTtTkzZtCHf67TT7"
 
 # Function to send logs to Discord
@@ -45,8 +64,14 @@ load_dotenv()
 
 # Secret Key for session management
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback_secret_key")
-# Register the LTI blueprint
-app.register_blueprint(lti_bp)
+
+# # Register the LTI blueprint
+# app.register_blueprint(lti_bp)
+
+
+# =============================================
+# =========== Chatbot Functionality ===========
+# =============================================
 
 # Canvas API Token and LLM API Key from environment variables
 CANVAS_API_TOKEN = os.getenv("CANVAS_API_TOKEN")
@@ -143,6 +168,111 @@ def chat():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+# =============================================
+# =========== LTI 1.3 Functionality ===========
+# =============================================
+
+# Set up config
+private_key_pem = os.environ.get("LTI_PRIVATE_KEY", "")
+public_key_pem = os.environ.get("LTI_PUBLIC_KEY", "")
+if not private_key_pem or not public_key_pem:
+    raise RuntimeError("Missing LTI_PRIVATE_KEY or LTI_PUBLIC_KEY in environment!")
+ 
+issuer = "https://canvas.instructure.com"
+client_id = os.environ.get("LTI_CLIENT_ID")
+deployment_id = os.environ.get("LTI_DEPLOYMENT_ID", "")
+
+pylti_config_dict = {
+    issuer: [
+        {
+            "default": True,
+            "client_id": client_id,
+            "auth_login_url": "https://sso.canvaslms.com/api/lti/authorize_redirect",
+            "auth_token_url": "https://sso.canvaslms.com/login/oauth2/token",
+            "key_set_url": "https://sso.canvaslms.com/api/lti/security/jwks",
+            "deployment_ids": [deployment_id]
+        }
+    ]
+}
+
+tool_conf = ToolConfDict(pylti_config_dict)
+tool_conf.set_private_key(issuer, private_key_pem, client_id=client_id)
+tool_conf.set_public_key(issuer, public_key_pem, client_id=client_id)
+
+class ExtendedFlaskMessageLaunch(FlaskMessageLaunch):
+
+    def validate_nonce(self):
+        """
+        Probably it is bug on "https://lti-ri.imsglobal.org":
+        site passes invalid "nonce" value during deep links launch.
+        Because of this in case of iss == http://imsglobal.org just skip nonce validation.
+
+        """
+        iss = self.get_iss()
+        deep_link_launch = self.is_deep_link_launch()
+        if iss == "http://imsglobal.org" and deep_link_launch:
+            return self
+        return super().validate_nonce()
+
+
+def get_launch_data_storage():
+    return FlaskCacheDataStorage(cache)
+
+# JWKS ENDPOINT
+@app.route("/lti/jwks", methods=["GET"])
+def lti_jwks():
+    try:
+        # Fetch the public JWKS from tool_conf.
+        jwks = tool_conf.get_jwks(issuer, client_id)
+        return jsonify(jwks)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+# LOGIN INITIATION (OIDC)
+@app.route("/lti/login_initiation", methods=["GET", "POST"])
+def lti_login_initiation():
+    try:
+        flask_request = FlaskRequest()
+        launch_data_storage = get_launch_data_storage() 
+        
+        target_link = flask_request.get_param("target_link_uri")
+        if not target_link:
+            return jsonify({"error": "Missing target_link_uri"}), 400
+
+        oidc_login = FlaskOIDCLogin(flask_request, tool_conf, launch_data_storage=launch_data_storage)
+        return oidc_login\
+        .enable_check_cookies()\
+        .redirect(target_link)
+
+    except LtiException as e:
+        return jsonify({"error": f"LTI error: {str(e)}"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+# LTI LAUNCH
+@app.route("/lti/launch", methods=["GET", "POST"])
+def lti_launch():
+    try:
+        # Use FlaskRequest, launch data storage, and ExtendedFlaskMessageLaunch
+        flask_request = FlaskRequest()
+        launch_data_storage = get_launch_data_storage()
+        message_launch = ExtendedFlaskMessageLaunch(flask_request, tool_conf, launch_data_storage=launch_data_storage)
+        message_launch_data = message_launch.get_launch_data()
+
+        # Debugging output (prints launch data for verification)
+        logging.debug(message_launch_data)
+
+        # Store the launch data in session
+        session["lti_launch_data"] = message_launch_data
+
+        # Redirect to main UI (unchanged from your original implementation)
+        return redirect("https://gator-aide-fubd.onrender.com")
+
+    except LtiException as e:
+        return jsonify({"error": f"LTI error: {str(e)}"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 # Run the Flask server
 if __name__ == "__main__":
