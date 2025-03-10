@@ -62,7 +62,7 @@ COURSE_ID = "180"
 def get_canvas_token(user_id, cache):
     user_cache = get_user_cache(cache, user_id)
     dynamic_token = user_cache.get("canvas_access_token")
-    return dynamic_token if dynamic_token else "lol"
+    return dynamic_token if dynamic_token else "CANVAS_API_TOKEN"
 
 # Home route
 @app.route("/")
