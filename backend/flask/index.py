@@ -1,7 +1,7 @@
 """
 The main entry point for the Flask application server.
 """
-from flask import make_response, request, send_from_directory, redirect, jsonify
+from flask import make_response, request, send_from_directory, redirect, jsonify, session
 import logging, json, os, requests
 import openai
 from dotenv import load_dotenv
@@ -58,6 +58,12 @@ client = openai.OpenAI(
 CANVAS_API_BASE_URL = "https://ufldev.instructure.com/api/v1/courses"
 COURSE_ID = "180"
 
+# Token retrieval function with fallback
+def get_canvas_token(user_id, cache):
+    user_cache = get_user_cache(cache, user_id)
+    dynamic_token = user_cache.get("canvas_access_token")
+    return dynamic_token if dynamic_token else "lol"
+
 # Home route
 @app.route("/")
 def serve_index():
@@ -77,8 +83,14 @@ def chat():
         if not user_message:
             return jsonify({"response": "Please send a valid message."}), 400
 
+        # Retrieve user_id from session or default
+        user_id = session.get("user_id", "standalone_user")
+
+        # Get Canvas API Token dynamically with fallback
+        token = get_canvas_token(user_id, cache)
+
         # Step 1: Query Canvas SmartSearch API
-        headers = {'Authorization': f'Bearer {CANVAS_API_TOKEN}'}
+        headers = {'Authorization': f'Bearer {token}'}
         
         smartsearch_url = f"{CANVAS_API_BASE_URL}/{COURSE_ID}/smartsearch"
         params = {"q": user_message}
@@ -168,6 +180,31 @@ def launch():
     :rtype: flask.Response
     """
     launch_data, cookie_service = setup_lti_session(launch_data_storage)
+
+    # Retrieve the authorization code from launch_data
+    authorization_code = launch_data.get('https://purl.imsglobal.org/spec/lti/claim/ext', {}).get('authorization_code')
+
+    if authorization_code:
+        token_response = requests.post(
+            "https://sso.canvaslms.com/login/oauth2/token",
+            data={
+                "grant_type": "authorization_code",
+                "client_id": os.getenv("LTI_CLIENT_ID"),
+                "redirect_uri": "https://gator-aide-fubd.onrender.com/lti/launch",
+                "code": authorization_code
+            }
+        )
+
+        if token_response.status_code == 200:
+            token_data = token_response.json()
+            access_token = token_data.get('access_token')
+
+            # Securely store this access token for future API requests
+            user_id = launch_data.get('sub')
+            user_cache = get_user_cache(cache, user_id)
+            user_cache.set("canvas_access_token", access_token)
+        else:
+            logging.error("Token exchange failed: %s", token_response.text)
 
     response = redirect("https://gator-aide-fubd.onrender.com")
     cookie_service.update_response(response)
