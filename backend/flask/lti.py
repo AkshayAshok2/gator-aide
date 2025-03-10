@@ -62,15 +62,12 @@ def lti_login_initiation():
     try:
         flask_request = FlaskRequest()
 
-        # (Optional)
-        # flask_request = FlaskRequest(
-        #   cookies=request.cookies,
-        #   session=session,
-        #   request_data=request.values,
-        #   request_is_secure=request.is_secure
-        # )
-
-        # Create the OIDC Login
+        oidc_login = FlaskOIDCLogin(
+            request=flask_request,
+            tool_config=tool_conf,
+            session_service=FlaskSessionService(flask_request),
+            cookie_service=FlaskCookieService(flask_request)
+        )
 
         # Debugging: Log request params
         logging.debug(f"LTI Login Initiation Request: {request.args.to_dict()}")
@@ -78,17 +75,10 @@ def lti_login_initiation():
         # Check for missing target_link_uri
         target_link = flask_request.get_param("target_link_uri")
         if not target_link:
-            logging.warning("⚠️ Missing target_link_uri, using fallback")
+            logging.warning("Missing target_link_uri, using fallback")
             target_link = "https://gator-aide-fubd.onrender.com/lti/launch"  # Fallback
 
         logging.debug(f"Redirecting to target link: {target_link}")
-
-        oidc_login = FlaskOIDCLogin(
-            request=flask_request,
-            tool_config=tool_conf,
-            session_service=FlaskSessionService(flask_request),
-            cookie_service=FlaskCookieService(flask_request)
-        )
 
         return oidc_login.redirect(target_link)
 
