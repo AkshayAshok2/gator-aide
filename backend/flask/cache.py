@@ -1,6 +1,5 @@
 from flask_caching import Cache
 
-
 def get_app_cache(app):
     """
     Returns the cache from the app.
