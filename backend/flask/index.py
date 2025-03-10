@@ -154,12 +154,7 @@ def login():
     :return: The tool login response.
     :rtype: flask.Response
     """
-    launch_data, cookie_service = setup_lti_session(launch_data_storage)
-
-    response = tool_login(launch_data_storage)
-    cookie_service.update_response(response)
-
-    return response
+    return tool_login(launch_data_storage)
 
 
 @app.route("/lti/launch", methods=["POST"])
