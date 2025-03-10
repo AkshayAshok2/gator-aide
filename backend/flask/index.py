@@ -234,20 +234,25 @@ def lti_jwks():
 def lti_login_initiation():
     try:
         flask_request = FlaskRequest()
-        launch_data_storage = get_launch_data_storage() 
-        
+        launch_data_storage = get_launch_data_storage()
+
         target_link = flask_request.get_param("target_link_uri")
+
         if not target_link:
-            return jsonify({"error": "Missing target_link_uri"}), 400
+            logging.error("LTI Login Initiation Failed: Missing 'target_link_uri'")
+            return jsonify({"error": "LTI Login Initiation Failed: Missing 'target_link_uri'"}), 400
+
+        # Log incoming request parameters for debugging
+        logging.info(f"LTI Login Initiation: target_link_uri={target_link}")
 
         oidc_login = FlaskOIDCLogin(flask_request, tool_conf, launch_data_storage=launch_data_storage)
-        return oidc_login\
-        .enable_check_cookies()\
-        .redirect(target_link)
+        return oidc_login.enable_check_cookies().redirect(target_link)
 
     except LtiException as e:
+        logging.error(f"LTI error: {str(e)}")
         return jsonify({"error": f"LTI error: {str(e)}"}), 400
     except Exception as e:
+        logging.error(f"Unexpected error: {str(e)}")
         return jsonify({"error": str(e)}), 400
 
 # LTI LAUNCH
@@ -261,7 +266,8 @@ def lti_launch():
         message_launch_data = message_launch.get_launch_data()
 
         # Debugging output (prints launch data for verification)
-        logging.debug(message_launch_data)
+        logging.debug(json.dumps(message_launch_data, indent=4))
+
 
         # Store the launch data in session
         session["lti_launch_data"] = message_launch_data
