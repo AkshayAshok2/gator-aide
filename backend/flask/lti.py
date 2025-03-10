@@ -75,11 +75,12 @@ def lti_login_initiation():
         # Debugging: Log request params
         logging.debug(f"LTI Login Initiation Request: {request.args.to_dict()}")
 
-        # Ensure target_link_uri exists
+        # Check for missing target_link_uri
         target_link = flask_request.get_param("target_link_uri")
         if not target_link:
-            return jsonify({"error": "Missing required parameter: target_link_uri"}), 400
-        
+            logging.warning("⚠️ Missing target_link_uri, using fallback")
+            target_link = "https://gator-aide-fubd.onrender.com/lti/launch"  # Fallback
+
         logging.debug(f"Redirecting to target link: {target_link}")
 
         oidc_login = FlaskOIDCLogin(
