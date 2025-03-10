@@ -1,6 +1,6 @@
 # lti.py
 
-import os
+import os, logging
 from flask import Blueprint, jsonify, redirect, session, request, url_for
 from dotenv import load_dotenv
 from pylti1p3.contrib.flask import (
@@ -71,6 +71,17 @@ def lti_login_initiation():
         # )
 
         # Create the OIDC Login
+
+        # Debugging: Log request params
+        logging.debug(f"LTI Login Initiation Request: {request.args.to_dict()}")
+
+        # Ensure target_link_uri exists
+        target_link = flask_request.get_param("target_link_uri")
+        if not target_link:
+            return jsonify({"error": "Missing required parameter: target_link_uri"}), 400
+        
+        logging.debug(f"Redirecting to target link: {target_link}")
+
         oidc_login = FlaskOIDCLogin(
             request=flask_request,
             tool_config=tool_conf,
@@ -78,7 +89,6 @@ def lti_login_initiation():
             cookie_service=FlaskCookieService(flask_request)
         )
 
-        target_link = flask_request.get_param("target_link_uri")
         return oidc_login.redirect(target_link)
 
     except LtiException as e:
