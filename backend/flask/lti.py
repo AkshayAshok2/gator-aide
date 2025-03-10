@@ -49,7 +49,9 @@ def tool_login(launch_data_storage):
         cookies=request.cookies,
         session=session
     )
-    target_link_uri = wrapped_flask_request.get_param("target_link_uri")
+    # target_link_uri = wrapped_flask_request.get_param("target_link_uri")
+    target_link_uri = "https://gator-aide-fubd.onrender.com/lti/login_initiation"
+
     if not target_link_uri:
         return jsonify({"error": "Missing target_link_uri"}), 400
     cookie_service = FlaskCookieService(wrapped_flask_request)
