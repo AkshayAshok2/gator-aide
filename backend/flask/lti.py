@@ -3,7 +3,7 @@
 import os, logging
 from flask import Blueprint, jsonify, redirect, session, request, url_for
 from dotenv import load_dotenv
-from flask_caching import Cache
+from backend.flask.index import cache 
 from pylti1p3.contrib.flask import (
     FlaskRequest, 
     FlaskOIDCLogin, 
@@ -30,7 +30,6 @@ if not private_key_pem or not public_key_pem:
 issuer = "https://canvas.instructure.com"
 client_id = os.environ.get("LTI_CLIENT_ID")
 deployment_id = os.environ.get("LTI_DEPLOYMENT_ID", "")
-cache = Cache()
 
 pylti_config_dict = {
     issuer: [
