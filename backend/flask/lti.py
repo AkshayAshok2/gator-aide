@@ -13,13 +13,14 @@ from pylti1p3.contrib.flask import (
     FlaskCacheDataStorage
 )
 
-# pylti1p3 standard config + registration classes
 from pylti1p3.tool_config import ToolConfDict
 from pylti1p3.exception import LtiException
 
 lti_bp = Blueprint("lti_bp", __name__)
 
 load_dotenv()
+
+
 
 # Set up config
 private_key_pem = os.environ.get("LTI_PRIVATE_KEY", "")
@@ -47,6 +48,22 @@ pylti_config_dict = {
 tool_conf = ToolConfDict(pylti_config_dict)
 tool_conf.set_private_key(issuer, private_key_pem, client_id=client_id)
 tool_conf.set_public_key(issuer, public_key_pem, client_id=client_id)
+
+class ExtendedFlaskMessageLaunch(FlaskMessageLaunch):
+
+    def validate_nonce(self):
+        """
+        Probably it is bug on "https://lti-ri.imsglobal.org":
+        site passes invalid "nonce" value during deep links launch.
+        Because of this in case of iss == http://imsglobal.org just skip nonce validation.
+
+        """
+        iss = self.get_iss()
+        deep_link_launch = self.is_deep_link_launch()
+        if iss == "http://imsglobal.org" and deep_link_launch:
+            return self
+        return super().validate_nonce()
+
 
 def get_launch_data_storage():
     return FlaskCacheDataStorage(cache)

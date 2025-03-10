@@ -12,6 +12,7 @@ import logging
 # Initialize Flask app
 app = Flask(__name__, static_folder='../../frontend', static_url_path='')
 CORS(app)
+cache = Cache(app)  
 
 # Logging Purposes
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1348451785966227497/3o8t4ulCGPLpRVRTL_6GL4LqfnvC-pjV_M7rSbBhrawYojH5_1muPTtTkzZtCHf67TT7"
