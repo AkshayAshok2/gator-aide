@@ -1,5 +1,6 @@
 annotated-types==0.7.0
 anyio==4.8.0
+asgiref==3.8.1
 blinker==1.9.0
 cachelib==0.13.0
 cachetools==5.5.1
