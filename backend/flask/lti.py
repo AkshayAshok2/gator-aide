@@ -27,7 +27,7 @@ if not private_key_pem or not public_key_pem:
  
 issuer = "https://canvas.instructure.com"
 client_id = os.environ.get("LTI_CLIENT_ID")
-deployment_id = "266:daeddcede0b24c205072c31cdcf0765d235f3596"
+deployment_id = os.environ.get("LTI_DEPLOYMENT_ID", "")
 
 pylti_config_dict = {
     issuer: [

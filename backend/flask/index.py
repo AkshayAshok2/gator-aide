@@ -4,14 +4,42 @@ from backend.flask.lti import lti_bp
 import requests
 import openai
 import os
+import json
 from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+import logging
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='../../frontend', static_url_path='')
 CORS(app)
+
+# Logging Purposes
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1348451785966227497/3o8t4ulCGPLpRVRTL_6GL4LqfnvC-pjV_M7rSbBhrawYojH5_1muPTtTkzZtCHf67TT7"
+
+# Function to send logs to Discord
+def send_log_to_discord(message):
+    data = {"content": f"🛠 Debug Log:\n{message}"}
+    requests.post(DISCORD_WEBHOOK_URL, data=json.dumps(data), headers={"Content-Type": "application/json"})
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Flask Request Logging
+@app.before_request
+def log_request():
+    log_message = f"📢 Incoming Request: {request.method} {request.url}\nParams: {request.args.to_dict()}"
+    send_log_to_discord(log_message)
+
+@app.after_request
+def log_response(response):
+    if response.direct_passthrough:
+        response.direct_passthrough = False  # Force Flask to load response data
+
+    log_message = f"✅ Response: {response.status}\n{response.get_data(as_text=True)[:500]}"
+    send_log_to_discord(log_message)  # Send logs to Discord
+    return response
+
+# Load environment variables
+load_dotenv()
 
 # Secret Key for session management
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback_secret_key")
