@@ -69,6 +69,8 @@ def lti_login_initiation():
             cookie_service=FlaskCookieService(flask_request)
         )
 
+        logging.debug("LTI Login Initiation Request Params: %s", request.args.to_dict())
+
         # Debugging: Log request params
         logging.debug(f"LTI Login Initiation Request: {request.args.to_dict()}")
 
